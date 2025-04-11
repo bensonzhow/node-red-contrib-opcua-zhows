@@ -344,7 +344,7 @@
        }
        items = [];
        node.items = items;
-       set_node_status_to("create client");
+       set_node_status_to("create client",msg);
        if (callback) {
          callback(msg);
        }
@@ -404,7 +404,11 @@
          text: statusParameter.status,
          endpoint: `${endpoint}`
        });
-       node.send([null, { error: null, endpoint: `${endpoint}`, status: currentStatus }, null])
+       let newMsg = { error: null, endpoint: `${endpoint}`, status: currentStatus };
+       if(cusMsg&&cusMsg.otherMsg){
+        newMsg.otherMsg = cusMsg.otherMsg;
+       }
+       node.send([null, newMsg , null])
  
      }
  
@@ -498,10 +502,10 @@
        }
  
        if (opcuaEndpoint.endpoint.indexOf("opc.tcp://0.0.0.0") === 0) {
-         set_node_status_to("no client")
+         set_node_status_to("no client",cusMsg)
        }
        else {
-         set_node_status_to("connecting");
+         set_node_status_to("connecting",cusMsg);
        }
        if (!node.client) {
          verbose_log("No client to connect...");
@@ -512,7 +516,7 @@
          await node.client.clientCertificateManager.initialize();
        }
        catch (error1) {
-         set_node_status_to("invalid certificate");
+         set_node_status_to("invalid certificate",cusMsg);
          let msg = {};
          msg.error = {};
          msg.error.message = "Certificate error: " + error1.message;
@@ -540,7 +544,7 @@
          verbose_warn("Case C: With Sign you cannot use SecurityPolicy None!!");
          // verbose_error("Invalid endpoint parameters: ", err);
          node_error("Wrong endpoint parameters: " + JSON.stringify(opcuaEndpoint));
-         set_node_status_to("invalid endpoint");
+         set_node_status_to("invalid endpoint",cusMsg);
          let msg = {};
          msg.error = {};
          msg.error.message = "Invalid endpoint: " + err;
@@ -585,7 +589,7 @@
            return;
          }
          node.session = session;
-         set_node_status_to("session active");
+         set_node_status_to("session active",cusMsg);
          for (let i in cmdQueue) {
            processInputMsg(cmdQueue[i]);
          }
@@ -2616,7 +2620,7 @@
        else {
          verbose_warn("No session to close!");
        }
-       set_node_status_to("reconnect");
+       set_node_status_to("reconnect",msg);
        create_opcua_client(connect_opcua_client,msg);
      }
  
