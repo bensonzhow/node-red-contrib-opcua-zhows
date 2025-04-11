@@ -294,7 +294,7 @@
        set_node_status2_to("reconnect", "starting...");
      };
  
-     function create_opcua_client(callback) {
+     function create_opcua_client(callback,msg={}) {
        node.client = null;
        try {
          // Use empty 0.0.0.0 address as "no client" initial value
@@ -305,9 +305,9 @@
            }
            items = [];
            node.items = items;
-           set_node_status_to("no client");
+           set_node_status_to("no client",msg);
            if (callback) {
-             callback();
+             callback(msg);
            }
            return;
          }
@@ -346,7 +346,7 @@
        node.items = items;
        set_node_status_to("create client");
        if (callback) {
-         callback();
+         callback(msg);
        }
      }
  
@@ -390,7 +390,7 @@
        }
      }
  
-     function set_node_status_to(statusValue) {
+     function set_node_status_to(statusValue,cusMsg={}) {
        verbose_log(chalk.yellow("Client status: ") + chalk.cyan(statusValue));
        let statusParameter = opcuaBasics.get_node_status(statusValue);
        currentStatus = statusValue;
@@ -445,7 +445,7 @@
        node.send([null, { error: error, endpoint: `${endpoint}`, status: currentStatus }, null]);
      }
  
-     async function connect_opcua_client() {
+     async function connect_opcua_client(cusMsg) {
        if (opcuaEndpoint.login === true) {
          verbose_log(chalk.green("Using UserName & password: ") + chalk.cyan(JSON.stringify(userIdentity)));
          if (opcuaEndpoint.credentials && opcuaEndpoint['user'] && opcuaEndpoint['password']) {
@@ -517,6 +517,9 @@
          msg.error = {};
          msg.error.message = "Certificate error: " + error1.message;
          msg.error.source = this;
+         if(cusMsg&&cusMsg.otherMsg){
+           msg.otherMsg = cusMsg.otherMsg;
+         }
          node.error("Certificate error", msg);
        }
        node.debug(chalk.yellow("Trusted folder:      ") + chalk.cyan(node.client.clientCertificateManager.trustedFolder));
@@ -542,6 +545,9 @@
          msg.error = {};
          msg.error.message = "Invalid endpoint: " + err;
          msg.error.source = this;
+         if(cusMsg&&cusMsg.otherMsg){
+           msg.otherMsg = cusMsg.otherMsg;
+         }
          node.error("Invalid endpoint", msg);
          return;
        }
@@ -693,7 +699,11 @@
            verbose_warn(`can't work without OPC UA client ${node.client} client ${node.session}`);
            reset_opcua_client(connect_opcua_client);
          }
-         node.send([null, { error: "can't work without OPC UA client", endpoint: `${opcuaEndpoint.endpoint}`, status: currentStatus }, null]);
+         let errMsg = { error: "can't work without OPC UA client", endpoint: `${opcuaEndpoint.endpoint}`, status: currentStatus }
+         if(msg.otherMsg){
+           errMsg.otherMsg = msg.otherMsg;
+         }
+         node.send([null, errMsg , null]);
          return;
        }
  
@@ -1102,7 +1112,7 @@
        }
        console.log("#2 Create client");
        if (!node.client) {
-         create_opcua_client(connect_opcua_client);
+         create_opcua_client(connect_opcua_client,msg);
        }
      }
  
@@ -2607,7 +2617,7 @@
          verbose_warn("No session to close!");
        }
        set_node_status_to("reconnect");
-       create_opcua_client(connect_opcua_client);
+       create_opcua_client(connect_opcua_client,msg);
      }
  
      node.on("close", async (done) => {
